@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Suivi GPS des Bateaux (Leaflet)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        /* Body: Fond avec dégradé subtil */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Dégradé de bleu très clair à blanc, simulant l'horizon */
+            background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);
+            color: #1a1a2e;
+            text-align: center;
+            margin: 0;
+            padding-top: 30px;
+            transition: background-color 0.5s ease;
+        }
+
+        /* Header (Titre): Style thématique avec animation de "flottement" */
+        h1 {
+            color: #007bff;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            display: inline-block;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            /* Effet de mouvement subtil */
+            animation: floatEffect 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatEffect {
+            0% {
+                transform: translateY(0px);
+            }
+
+            100% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Carte: Format Carré et Style "écran de contrôle" */
+        #map {
+            width: 500px; /* Largeur fixe */
+            height: 500px; /* Hauteur fixe (Carré) */
+            margin: 20px auto;
+            /* Bordure imitant un écran */
+            border: 10px solid #1a1a2e;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            cursor: grab;
+        }
+    </style>
+</head>
+<body>
+    <h1>Suivi des Bateaux sur Carte GPS</h1>
+
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let markers = {};
+
+        function initMap() {
+            // Initialiser la carte Leaflet
+            map = L.map('map').setView([48.8566, 2.3522], 6); // Centré sur Paris
+
+            // Ajout de la couche de tuiles OpenStreetMap (OSM)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Lancer la mise à jour des positions toutes les 5 secondes
+            updatePositions();
+            setInterval(updatePositions, 5000);
+        }
+
+        function updatePositions() {
+            // Requête au script PHP (get_positions.php)
+            fetch('get_positions.php')
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Erreur: Le serveur PHP ne renvoie pas de données.');
+                        throw new Error('Network response was not ok.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    data.forEach(bateau => {
+                        // Leaflet utilise [Latitude, Longitude]
+                        const lat = parseFloat(bateau.latitude);
+                        const lng = parseFloat(bateau.longitude);
+                        const latLng = [lat, lng];
+
+                        // Assurez-vous que les coordonnées sont valides
+                        if (isNaN(lat) || isNaN(lng)) return;
+                        b  
+                        if (markers[bateau.nom]) {
+                            // Déplacer le marqueur existant
+                            markers[bateau.nom].setLatLng(latLng);
+                        } else {
+                            // Créer un nouveau marqueur (point rouge par défaut)
+                            markers[bateau.nom] = L.marker(latLng)
+                                .addTo(map)
+                                .bindPopup("Bateau: " + bateau.nom + '<br>Dernière position: ' + bateau.timestamp);
+                        }
+                    });
+                })
+                .catch(error => console.error('Erreur lors de la récupération ou du traitement des positions:', error));
+        }
+
+        // Appel de la fonction d'initialisation au chargement de la page
+        initMap();
+    </script>
+
+</body>
+</html>
